@@ -76,6 +76,158 @@ Realtime Database rules must index g for your chosen path:
 }
 ```
 
+## Copy-Paste Templates
+
+### Which template should I use?
+
+| Scenario | Template | Key API |
+|---|---|---|
+| Driver app pushes lat/lng on each GPS tick from Dart | **A** | `Geofire.setLocation(...)` |
+| Rider/passenger app queries and ranks nearby drivers | **B** | `Geofire.queryDriverCandidatesAtLocation(...)` |
+| Driver app must track location in the background without Dart running | **C** | `Geofire.startNativeTrackingDetailed(...)` |
+| You want Dart control but only need basic proximity events (no typed model) | **A** | `Geofire.queryAtLocation(...)` |
+| You need custom score/rank logic beyond rating + priority | **B** | `Geofire.queryAtLocationAdvanced(...)` with `scoreBy:` |
+| Android reliability matters most in background | **C** | set `useForegroundService: true` |
+| iOS background with minimal battery use | **C** | set `useSignificantChanges: true` |
+
+> Start with Template A + B for most apps. Add Template C only when Dart-side GPS is not reliable enough in background.
+
+### Template A: Driver app publisher (Dart-driven updates)
+
+```dart
+import 'package:flutter_geofire/flutter_geofire.dart';
+
+class DriverPublisher {
+  static const String path = 'drivers_live';
+  static const String driverId = 'driver_123';
+
+  static Future<void> init() async {
+    final bool ok = await Geofire.initialize(path);
+    if (!ok) {
+      throw Exception('GeoFire init failed');
+    }
+  }
+
+  static Future<void> publish(double lat, double lng) async {
+    await Geofire.setLocation(
+      driverId,
+      lat,
+      lng,
+      data: {
+        'vehicleType': 'bike',
+        'region': 'nairobi',
+        'isVerified': true,
+        'rating': 4.8,
+        'activeTrips': 0,
+        'priority': 2,
+        'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      },
+    );
+  }
+
+  static Future<void> remove() async {
+    await Geofire.removeLocation(driverId);
+  }
+}
+```
+
+### Template B: Rider app consumer (ranked nearby candidates)
+
+```dart
+import 'dart:async';
+import 'package:flutter_geofire/flutter_geofire.dart';
+
+class RiderMatching {
+  static const String path = 'drivers_live';
+  StreamSubscription<List<GeofireDriverCandidate>>? _sub;
+
+  Future<void> init() async {
+    final bool ok = await Geofire.initialize(path);
+    if (!ok) {
+      throw Exception('GeoFire init failed');
+    }
+  }
+
+  Future<void> start(double riderLat, double riderLng) async {
+    await _sub?.cancel();
+    _sub = Geofire.queryDriverCandidatesAtLocation(
+      riderLat,
+      riderLng,
+      5,
+      vehicleType: 'bike',
+      region: 'nairobi',
+      isVerified: true,
+      minRating: 4.5,
+      maxActiveTrips: 1,
+      limit: 20,
+    ).listen((candidates) {
+      if (candidates.isEmpty) {
+        return;
+      }
+
+      final best = candidates.first;
+      print('Best: ${best.key}, score=${best.score}');
+    });
+  }
+
+  Future<void> stop() async {
+    await _sub?.cancel();
+    await Geofire.stopListener();
+  }
+}
+```
+
+### Template C: Native tracker mode (platform-driven updates)
+
+```dart
+import 'package:flutter_geofire/flutter_geofire.dart';
+
+class NativeTracker {
+  static const String path = 'drivers_live';
+  static const String driverId = 'driver_123';
+
+  static Future<void> init() async {
+    final bool ok = await Geofire.initialize(path);
+    if (!ok) {
+      throw Exception('GeoFire init failed');
+    }
+  }
+
+  static Future<void> start() async {
+    final GeofireNativeTrackingStartResult result =
+        await Geofire.startNativeTrackingDetailed(
+      GeofireNativeTrackingConfig(
+        id: driverId,
+        intervalMs: 10000,
+        minDistanceMeters: 20,
+        includeLocationMeta: true,
+        allowBackground: true,
+        useForegroundService: true,
+        useSignificantChanges: false,
+        foregroundNotificationTitle: 'Driver online',
+        foregroundNotificationBody: 'Sharing live location',
+        data: {
+          'vehicleType': 'bike',
+          'region': 'nairobi',
+          'isVerified': true,
+        },
+      ),
+    );
+
+    print('started=${result.started}, reason=${result.reason}');
+  }
+
+  static Future<void> status() async {
+    final Map<String, dynamic> status = await Geofire.nativeTrackingStatus();
+    print(status);
+  }
+
+  static Future<void> stop() async {
+    await Geofire.stopNativeTracking();
+  }
+}
+```
+
 ## Core APIs
 
 ### 1. Set location
