@@ -1,238 +1,266 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_geofire/flutter_geofire.dart';
 
-void main() => runApp(MyApp());
+const String _pathToReference = 'drivers_live';
+const String _demoDriverId = 'driver_demo_001';
 
-class MyApp extends StatefulWidget {
-  @override
-  _MyAppState createState() => _MyAppState();
+const double _driverLat = -1.286389;
+const double _driverLng = 36.817223;
+
+const double _riderLat = -1.2855;
+const double _riderLng = 36.8168;
+
+void main() {
+  runApp(const ExampleApp());
 }
 
-class _MyAppState extends State<MyApp> {
-  List<String> keysRetrieved = [];
-
-  @override
-  void initState() {
-    super.initState();
-    initPlatformState();
-  }
-
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String pathToReference = "Sites";
-
-    //Intializing geoFire
-    Geofire.initialize(pathToReference);
-
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    try {
-      Geofire.queryAtLocation(30.730743, 76.774948, 5)?.listen((map) {
-        print(map);
-        if (map != null) {
-          var callBack = map['callBack'];
-
-          //latitude will be retrieved from map['latitude']
-          //longitude will be retrieved from map['longitude']
-
-          switch (callBack) {
-            case Geofire.onKeyEntered:
-              keysRetrieved.add(map["key"]);
-              break;
-
-            case Geofire.onKeyExited:
-              keysRetrieved.remove(map["key"]);
-              break;
-
-            case Geofire.onKeyMoved:
-//              keysRetrieved.add(map[callBack]);
-              break;
-
-            case Geofire.onGeoQueryReady:
-//              map["result"].forEach((key){
-//                keysRetrieved.add(key);
-//              });
-
-              break;
-          }
-        }
-
-        setState(() {});
-      }).onError((error) {
-        print(error);
-      });
-    } on PlatformException {
-//      response = 'Failed to get platform version.';
-    }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-  }
+class ExampleApp extends StatelessWidget {
+  const ExampleApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-          appBar: AppBar(
-            title: const Text('Plugin example app'),
-          ),
-          body: Column(
-            children: <Widget>[
-              Padding(
-                padding: EdgeInsets.all(20.0),
-              ),
-              Center(
-                child: keysRetrieved.length > 0
-                    ? Text("First key is " +
-                        keysRetrieved.first.toString() +
-                        "\nTotal Keys " +
-                        keysRetrieved.length.toString())
-                    : CircularProgressIndicator(),
-              ),
-              Padding(
-                padding: EdgeInsets.all(10.0),
-              ),
-              Center(
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                  ),
-                  onPressed: () {
-                    setLocation();
-                  },
-                  child: Text(
-                    "Set Location",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(10.0),
-              ),
-              Center(
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                  ),
-                  onPressed: () {
-                    setLocationFirst();
-                  },
-                  child: Text(
-                    "Set Location AsH28LWk8MXfwRLfVxgx",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(10.0),
-              ),
-              Center(
-                child: TextButton(
-                  onPressed: () {
-                    getLocation();
-                  },
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                  ),
-                  child: Text(
-                    "Get Location AsH28LWk8MXfwRLfVxgx",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(10.0),
-              ),
-              Center(
-                child: TextButton(
-                  onPressed: () {
-                    removeLocation();
-                  },
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                  ),
-                  child: Text(
-                    "Remove Location AsH28LWk8MXfwRLfVxgx",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(10.0),
-              ),
-              // Center(
-              //   child: RaisedButton(
-              //     onPressed: () {
-              //       initPlatformState();
-              //     },
-              //     color: Colors.blueAccent,
-              //     child: Text(
-              //       "Register Listener",
-              //       style: TextStyle(color: Colors.white),
-              //     ),
-              //   ),
-              // ),
-              // Padding(
-              //   padding: EdgeInsets.all(10.0),
-              // ),
-              Center(
-                child: TextButton(
-                  onPressed: () {
-                    removeQueryListener();
-                  },
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                  ),
-                  child: Text(
-                    "Remove Query Listener",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          )),
+      debugShowCheckedModeBanner: false,
+      home: const GeofireDispatchDemoPage(),
+      theme: ThemeData(primarySwatch: Colors.indigo),
     );
   }
+}
 
-  void setLocation() async {
-    bool? response = await Geofire.setLocation(
-        new DateTime.now().millisecondsSinceEpoch.toString(),
-        30.730743,
-        76.774948);
+class GeofireDispatchDemoPage extends StatefulWidget {
+  const GeofireDispatchDemoPage({Key? key}) : super(key: key);
 
-    print(response);
+  @override
+  State<GeofireDispatchDemoPage> createState() =>
+      _GeofireDispatchDemoPageState();
+}
+
+class _GeofireDispatchDemoPageState extends State<GeofireDispatchDemoPage> {
+  final List<GeofireDriverCandidate> _candidates = <GeofireDriverCandidate>[];
+
+  StreamSubscription<List<GeofireDriverCandidate>>? _candidateSubscription;
+
+  bool _initialized = false;
+  String _status = 'Initializing...';
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAndStartQuery();
   }
 
-  void setLocationFirst() async {
-    bool? response =
-        await Geofire.setLocation("AsH28LWk8MXfwRLfVxgx", 30.730743, 76.774948);
-
-    print(response);
+  @override
+  void dispose() {
+    _candidateSubscription?.cancel();
+    Geofire.stopListener();
+    super.dispose();
   }
 
-  void removeLocation() async {
-    bool? response = await Geofire.removeLocation("AsH28LWk8MXfwRLfVxgx");
+  Future<void> _initializeAndStartQuery() async {
+    final bool ok = await Geofire.initialize(_pathToReference);
+    if (!mounted) {
+      return;
+    }
 
-    print(response);
+    if (!ok) {
+      setState(() {
+        _status = 'Initialization failed';
+      });
+      return;
+    }
+
+    setState(() {
+      _initialized = true;
+      _status = 'Ready';
+    });
+
+    await _candidateSubscription?.cancel();
+    _candidateSubscription = Geofire.queryDriverCandidatesAtLocation(
+      _riderLat,
+      _riderLng,
+      5,
+      vehicleType: 'bike',
+      region: 'nairobi',
+      isVerified: true,
+      minRating: 4.0,
+      maxActiveTrips: 1,
+      limit: 20,
+    ).listen((List<GeofireDriverCandidate> candidates) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _candidates
+          ..clear()
+          ..addAll(candidates);
+        _status = 'Live query running';
+      });
+    }, onError: (Object error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _status = 'Query error: $error';
+      });
+    });
   }
 
-  void removeQueryListener() async {
-    bool? response = await Geofire.stopListener();
+  Future<void> _publishDemoDriverLocation() async {
+    if (!_initialized) {
+      return;
+    }
 
-    keysRetrieved.clear();
-    setState(() {});
+    final bool? response = await Geofire.setLocation(
+      _demoDriverId,
+      _driverLat,
+      _driverLng,
+      data: <String, dynamic>{
+        'driverId': _demoDriverId,
+        'vehicleType': 'bike',
+        'region': 'nairobi',
+        'isVerified': true,
+        'rating': 4.8,
+        'activeTrips': 0,
+        'priority': 2,
+        'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      },
+    );
 
-    print(response);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _status = response == true
+          ? 'Driver location published'
+          : 'Failed to publish driver location';
+    });
   }
 
-  void getLocation() async {
-    Map<String, dynamic> response =
-        await Geofire.getLocation("AsH28LWk8MXfwRLfVxgx");
+  Future<void> _removeDemoDriverLocation() async {
+    final bool? response = await Geofire.removeLocation(_demoDriverId);
+    if (!mounted) {
+      return;
+    }
 
-    print(response);
+    setState(() {
+      _status = response == true
+          ? 'Driver location removed'
+          : 'Failed to remove driver location';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final GeofireDriverCandidate? bestCandidate =
+        _candidates.isEmpty ? null : _candidates.first;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('GeoFire Driver/Rider Demo'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
+                      'Status',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(_status),
+                    const SizedBox(height: 8),
+                    Text('Matched candidates: ${_candidates.length}'),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                ElevatedButton(
+                  onPressed: _initialized ? _publishDemoDriverLocation : null,
+                  child: const Text('Publish Driver'),
+                ),
+                ElevatedButton(
+                  onPressed: _initialized ? _removeDemoDriverLocation : null,
+                  child: const Text('Remove Driver'),
+                ),
+                OutlinedButton(
+                  onPressed: _initializeAndStartQuery,
+                  child: const Text('Restart Query'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (bestCandidate != null)
+              Card(
+                color: Colors.indigo.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        'Best Candidate',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Key: ${bestCandidate.key}'),
+                      Text('Score: ${bestCandidate.score.toStringAsFixed(2)}'),
+                      Text(
+                          'Distance: ${bestCandidate.distanceKm.toStringAsFixed(2)} km'),
+                      Text('Vehicle: ${bestCandidate.data.vehicleType ?? '-'}'),
+                      Text('Rating: ${bestCandidate.data.rating ?? '-'}'),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 12),
+            const Text(
+              'Candidate List',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: _candidates.isEmpty
+                  ? const Center(child: Text('No matched drivers yet'))
+                  : ListView.separated(
+                      itemCount: _candidates.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (BuildContext context, int index) {
+                        final GeofireDriverCandidate candidate =
+                            _candidates[index];
+                        return ListTile(
+                          dense: true,
+                          title: Text(candidate.key),
+                          subtitle: Text(
+                            'score ${candidate.score.toStringAsFixed(2)} | '
+                            'distance ${candidate.distanceKm.toStringAsFixed(2)} km | '
+                            'rating ${candidate.data.rating ?? '-'}',
+                          ),
+                          trailing:
+                              Text(candidate.data.vehicleType ?? 'unknown'),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
